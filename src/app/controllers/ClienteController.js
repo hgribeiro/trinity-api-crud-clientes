@@ -1,4 +1,5 @@
 import Cliente from '../models/Cliente';
+import Endereco from '../models/Endereco';
 
 class ClienteController {
   async store(req, res) {
@@ -9,9 +10,33 @@ class ClienteController {
     if (clienteExists) {
       return res.status(400).json({ error: 'Cliente já cadastrado na base' });
     }
-    const cliente = await Cliente.create(req.body);
 
-    return res.status(200).json(cliente);
+    const { nome, cpf, nascimento, endereco } = req.body;
+    const {
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      cep,
+    } = endereco;
+
+    const newCliente = { nome, cpf, nascimento };
+    const { id } = await Cliente.create(newCliente);
+    const cliente_id = id;
+    await Endereco.create({
+      cliente_id,
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      cep,
+    });
+
+    return res.status(200).json({ id, nome, cpf, nascimento, endereco });
   }
 
   async update(req, res) {
@@ -29,9 +54,15 @@ class ClienteController {
         .json({ error: 'Esse CPF já está cadastrado na base dados!' });
     }
 
-    const cliente = await clienteExists.update(req.body);
+    const { nome, cpf, nascimento } = await clienteExists.update(req.body);
 
-    return res.status(200).json(cliente);
+    const enderecoExists = Endereco.findOne({
+      where: { cliente_id: req.body.id },
+    });
+
+    const endereco = await enderecoExists.update(req.body.endereco);
+
+    return res.status(200).json({ nome, cpf, nascimento, endereco });
   }
 
   async show(req, res) {
@@ -41,15 +72,56 @@ class ClienteController {
         .status(404)
         .json({ error: 'Cliente não cadastrado na base de dados.' });
     }
+    const { id, nome, cpf, nascimento } = clienteExists;
+    const {
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      cep,
+    } = await Endereco.findOne({
+      where: { cliente_id: req.params.id },
+    });
 
-    res.status(200).json(clienteExists);
+    res.status(200).json({
+      id,
+      nome,
+      cpf,
+      nascimento,
+      endereco: { logradouro, numero, complemento, bairro, cidade, uf, cep },
+    });
   }
 
   // LISTAGEM DE TODOS OS CLIENTES.
   async index(req, res) {
     const clientes = await Cliente.findAll();
+    const enderecos = await Endereco.findAll();
 
-    return res.json(clientes);
+    const arrayCliente = [];
+
+    for (let i = 0; i < clientes.length; i++) {
+      const { id, nome, cpf, nascimento } = clientes[i];
+      const {
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        uf,
+        cep,
+      } = enderecos[i];
+      arrayCliente.push({
+        id,
+        nome,
+        cpf,
+        nascimento,
+        endereco: { logradouro, numero, complemento, bairro, cidade, uf, cep },
+      });
+    }
+
+    return res.json(arrayCliente);
   }
 
   async delete(req, res) {

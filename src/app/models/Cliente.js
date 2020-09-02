@@ -7,6 +7,7 @@ class Cliente extends Model {
         nome: Sequelize.STRING,
         cpf: Sequelize.STRING,
         nascimento: Sequelize.STRING,
+        // endereco_id: Sequelize.INTEGER,
       },
       {
         sequelize,
